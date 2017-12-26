@@ -50,13 +50,25 @@ unsigned long Flag;       // 1 means valid Distance, 0 means Distance is empty
 // Input: sample  12-bit ADC sample
 // Output: 32-bit distance (resolution 0.001cm)
 unsigned long Convert(unsigned long sample){
-  return 0;  // replace this line with real code
+  //return 0;  // replace this line with real code
+	return (0.4682*sample + 112.31);
 }
 
+
+#define NVIC_ST_CTRL_ENABLE     0x00000001  // Counter mode
+#define NVIC_ST_CTRL_CLK_SRC    0x00000004  // Clock Source
 // Initialize SysTick interrupts to trigger at 40 Hz, 25 ms
-void SysTick_Init(unsigned long period){
+void SysTick_Init(){
+	NVIC_ST_CTRL_R = 0;                   // disable SysTick during setup
+  NVIC_ST_RELOAD_R = 1999999;  // maximum reload value
+  NVIC_ST_CURRENT_R = 0;                // any write to current clears it
+                                        // enable SysTick with core clock
+  NVIC_ST_CTRL_R = 0x00000007;  // enable with core clock and interrupts
 
 }
+
+
+
 // executes every 25 ms, collects a sample, converts and stores in mailbox
 void SysTick_Handler(void){ 
 
@@ -74,48 +86,103 @@ void SysTick_Handler(void){
 // 2210 to "2.210 cm"
 //10000 to "*.*** cm"  any value larger than 9999 converted to "*.*** cm"
 void UART_ConvertDistance(unsigned long n){
-// as part of Lab 11 you implemented this function
+  unsigned i = 0;
+	unsigned cnt = 0;
+	char buffer[11];
+  do{
+    buffer[cnt] = n%10;// digit
+    n = n/10;
+    cnt++;
+  } 
+  while(n);// repeat until n==0
+
+	if(cnt > 4)
+	{
+		String[0] = '*' ;String[1] = '*';String[2] = '*';String[3] = '*'; String[4] = ' '; String[5] = '\0';
+	}
+	else
+	{
+		if(cnt == 1)
+		{
+			String[3] = buffer[cnt-1]+0x30;
+			String[2] = ' ';
+			String[1] = ' ';
+			String[0] = ' ';
+		}
+		if(cnt == 2)
+		{
+			String[3] = buffer[cnt-2]+0x30;
+			String[2] = buffer[cnt-1]+0x30;
+			String[1] = ' ';
+			String[0] = ' ';
+
+		}
+		if(cnt == 3)
+		{
+			String[3] = buffer[cnt-3]+0x30;
+			String[2] = buffer[cnt-2]+0x30;
+			String[1] = buffer[cnt-1]+0x30;
+			String[0] = ' ';
+			
+		}
+		if(cnt == 4)
+		{
+			String[3] = buffer[cnt-4]+0x30;
+			String[2] = buffer[cnt-3]+0x30;
+			String[1] = buffer[cnt-2]+0x30;
+			String[0] = buffer[cnt-1]+0x30;
+		}
+		
+		String[4] = ' ';
+		String[5] = '\0';
+	}
 
 }
 
 // main1 is a simple main program allowing you to debug the ADC interface
-int main1(void){ 
-  TExaS_Init(ADC0_AIN1_PIN_PE2, SSI0_Real_Nokia5110_Scope);
-  ADC0_Init();    // initialize ADC0, channel 1, sequencer 3
-  EnableInterrupts();
-  while(1){ 
-    ADCdata = ADC0_In();
-  }
-}
+//int main1(void){ 
+//  TExaS_Init(ADC0_AIN1_PIN_PE2, SSI0_Real_Nokia5110_Scope);
+//  ADC0_Init();    // initialize ADC0, channel 1, sequencer 3
+//  EnableInterrupts();
+//  while(1){ 
+//    ADCdata = ADC0_In();
+//  }
+//}
+
+
 // once the ADC is operational, you can use main2 to debug the convert to distance
-int main2(void){ 
+int main(void){ 
   TExaS_Init(ADC0_AIN1_PIN_PE2, SSI0_Real_Nokia5110_NoScope);
   ADC0_Init();    // initialize ADC0, channel 1, sequencer 3
   Nokia5110_Init();             // initialize Nokia5110 LCD
+	SysTick_Init();
   EnableInterrupts();
   while(1){ 
     ADCdata = ADC0_In();
     Nokia5110_SetCursor(0, 0);
     Distance = Convert(ADCdata);
-    UART_ConvertDistance(Distance); // from Lab 11
-    Nokia5110_OutString(String);    // output to Nokia5110 LCD (optional)
+   UART_ConvertDistance(Distance); // from Lab 11
+   Nokia5110_OutString(String);    // output to Nokia5110 LCD (optional)
   }
 }
+
+
 // once the ADC and convert to distance functions are operational,
 // you should use this main to build the final solution with interrupts and mailbox
-int main(void){ 
-  volatile unsigned long delay;
-  TExaS_Init(ADC0_AIN1_PIN_PE2, SSI0_Real_Nokia5110_Scope);
+//int main(void){ 
+//  volatile unsigned long delay;
+//  TExaS_Init(ADC0_AIN1_PIN_PE2, SSI0_Real_Nokia5110_Scope);
 // initialize ADC0, channel 1, sequencer 3
 // initialize Nokia5110 LCD (optional)
 // initialize SysTick for 40 Hz interrupts
 // initialize profiling on PF1 (optional)
                                     //    wait for clock to stabilize
 
-  EnableInterrupts();
+// EnableInterrupts();
 // print a welcome message  (optional)
-  while(1){ 
+//  while(1){ 
 // read mailbox
 // output to Nokia5110 LCD (optional)
-  }
-}
+//		
+//  }
+//}
