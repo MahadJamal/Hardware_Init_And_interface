@@ -33,7 +33,7 @@
 #include "..//tm4c123gh6pm.h"
 #include "Nokia5110.h"
 #include "TExaS.h"
-
+void UART_ConvertDistance(unsigned long n);
 void EnableInterrupts(void);  // Enable interrupts
 
 unsigned char String[10]; // null-terminated ASCII string
@@ -51,7 +51,8 @@ unsigned long Flag;       // 1 means valid Distance, 0 means Distance is empty
 // Output: 32-bit distance (resolution 0.001cm)
 unsigned long Convert(unsigned long sample){
   //return 0;  // replace this line with real code
-	return (0.4682*sample + 112.31);
+	return (0.488*sample + 1);
+	//return 1;
 }
 
 
@@ -71,6 +72,10 @@ void SysTick_Init(){
 
 // executes every 25 ms, collects a sample, converts and stores in mailbox
 void SysTick_Handler(void){ 
+	ADCdata = ADC0_In();
+	Distance = Convert(ADCdata);
+  UART_ConvertDistance(Distance); // from Lab 11
+	Flag = 1;
 
 }
 
@@ -86,7 +91,7 @@ void SysTick_Handler(void){
 // 2210 to "2.210 cm"
 //10000 to "*.*** cm"  any value larger than 9999 converted to "*.*** cm"
 void UART_ConvertDistance(unsigned long n){
-  unsigned i = 0;
+  //unsigned i = 0;
 	unsigned cnt = 0;
 	char buffer[11];
   do{
@@ -158,11 +163,10 @@ int main(void){
 	SysTick_Init();
   EnableInterrupts();
   while(1){ 
-    ADCdata = ADC0_In();
-    Nokia5110_SetCursor(0, 0);
-    Distance = Convert(ADCdata);
-   UART_ConvertDistance(Distance); // from Lab 11
+    //ADCdata = ADC0_In();
+   Nokia5110_SetCursor(0, 0);
    Nokia5110_OutString(String);    // output to Nokia5110 LCD (optional)
+		Flag = 0;
   }
 }
 
